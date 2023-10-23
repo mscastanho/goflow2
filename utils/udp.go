@@ -48,6 +48,7 @@ type UDPReceiver struct {
 
 	workers int
 	sockets int
+	bufferSize int
 }
 
 type UDPReceiverConfig struct {
@@ -55,6 +56,7 @@ type UDPReceiverConfig struct {
 	Sockets   int
 	Blocking  bool
 	QueueSize int
+	BufferSize int
 }
 
 func NewUDPReceiver(cfg *UDPReceiverConfig) (*UDPReceiver, error) {
@@ -78,6 +80,7 @@ func NewUDPReceiver(cfg *UDPReceiverConfig) (*UDPReceiver, error) {
 
 		r.sockets = cfg.Sockets
 		r.workers = cfg.Workers
+		r.bufferSize = cfg.BufferSize
 		dispatchSize = cfg.QueueSize
 		r.blocking = cfg.Blocking
 	}
@@ -142,6 +145,12 @@ func (r *UDPReceiver) receive(addr string, port int, started chan bool) error {
 		return err
 	}
 	localAddr, _ := udpconn.LocalAddr().(*net.UDPAddr)
+
+	if r.bufferSize != 0 {
+		if err := udpconn.SetReadBuffer(r.bufferSize); err != nil {
+			return err;
+		}
+	}
 
 	for {
 		pkt := packetPool.Get().(*udpPacket)
